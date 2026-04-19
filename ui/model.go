@@ -15,13 +15,10 @@ const maxChars = 300
 type Model struct {
 	client    *bsky.Client
 	textarea  textarea.Model
-	vimMode   VimMode
-	lastKey   string
 	posts     []bsky.Post
 	status    string
 	statusErr bool
 	posting   bool
-	loading   bool
 	authed    bool
 	width     int
 }
@@ -31,25 +28,20 @@ func NewModel(client *bsky.Client) Model {
 	ta.Placeholder = "What's on your mind?"
 	ta.SetHeight(5)
 	ta.SetWidth(50)
-	ta.CharLimit = 0 // We enforce manually
+	ta.CharLimit = 0
 	ta.ShowLineNumbers = false
-	ta.Blur()
+	ta.Focus()
 
 	return Model{
 		client:   client,
 		textarea: ta,
-		vimMode:  ModeNormal,
 		width:    60,
 	}
 }
 
-// --- Init ---
-
 func (m Model) Init() tea.Cmd {
-	return authCmd(m.client)
+	return tea.Batch(authCmd(m.client), textarea.Blink)
 }
-
-// --- Update ---
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -69,10 +61,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case FeedLoadedMsg:
 		m.posts = msg.Posts
-		m.loading = false
 
 	case FeedErrMsg:
-		m.loading = false
+		// フィード取得失敗は無視
 
 	case PostDoneMsg:
 		m.posting = false
@@ -87,35 +78,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusErr = true
 
 	case tea.KeyMsg:
-		// Ctrl+C always quits
 		if msg.Type == tea.KeyCtrlC {
 			return m, tea.Quit
 		}
-
-		// Ctrl+S posts (both modes)
 		if msg.Type == tea.KeyCtrlS {
 			return m, m.submitPost()
 		}
 
-		if m.vimMode == ModeInsert {
-			if msg.Type == tea.KeyEsc {
-				m.vimMode = ModeNormal
-				m.textarea.Blur()
-				return m, nil
-			}
-			var cmd tea.Cmd
-			m.textarea, cmd = m.textarea.Update(msg)
-			return m, cmd
-		}
-
-		// Normal mode
-		newTA, newMode, cmd, newLastKey := HandleNormalKey(m.textarea, msg, m.lastKey)
-		m.textarea = newTA
-		m.vimMode = newMode
-		m.lastKey = newLastKey
-		if newMode == ModeInsert {
-			m.textarea.Focus()
-		}
+		var cmd tea.Cmd
+		m.textarea, cmd = m.textarea.Update(msg)
 		return m, cmd
 	}
 
@@ -124,17 +95,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) submitPost() tea.Cmd {
 	text := strings.TrimSpace(m.textarea.Value())
-	if len([]rune(text)) == 0 || len([]rune(text)) > maxChars {
-		return nil
-	}
-	if m.posting || !m.authed {
+	if len([]rune(text)) == 0 || len([]rune(text)) > maxChars || m.posting || !m.authed {
 		return nil
 	}
 	m.posting = true
 	return postCmd(m.client, text)
 }
-
-// --- View ---
 
 func (m Model) View() string {
 	w := m.width - 4
@@ -144,13 +110,8 @@ func (m Model) View() string {
 
 	divider := dividerStyle.Render(strings.Repeat("─", w))
 
-	// Title
 	title := titleStyle.Render("post2bsky")
 
-	// Textarea
-	ta := m.textarea.View()
-
-	// Character counter
 	charCount := len([]rune(m.textarea.Value()))
 	var counter string
 	if charCount > maxChars {
@@ -160,14 +121,8 @@ func (m Model) View() string {
 	}
 	counterLine := lipgloss.NewStyle().Width(w).Align(lipgloss.Right).Render(counter)
 
-	// Mode line
-	modeLine := lipgloss.JoinHorizontal(
-		lipgloss.Bottom,
-		lipgloss.NewStyle().Width(w/2).Render(modeStyle.Render(m.vimMode.String())),
-		lipgloss.NewStyle().Width(w/2).Align(lipgloss.Right).Render(hintStyle.Render("ctrl+s: Post")),
-	)
+	hintLine := lipgloss.NewStyle().Width(w).Align(lipgloss.Right).Render(hintStyle.Render("ctrl+s: Post   ctrl+c: Quit"))
 
-	// Status
 	var statusLine string
 	if m.posting {
 		statusLine = hintStyle.Render("Posting...")
@@ -179,7 +134,6 @@ func (m Model) View() string {
 		}
 	}
 
-	// Recent posts
 	recentParts := []string{recentHeaderStyle.Render("Recent posts (last 5):")}
 	if len(m.posts) == 0 {
 		recentParts = append(recentParts, hintStyle.Render("  (none)"))
@@ -196,10 +150,10 @@ func (m Model) View() string {
 	body := strings.Join([]string{
 		title,
 		divider,
-		ta,
+		m.textarea.View(),
 		counterLine,
 		divider,
-		modeLine,
+		hintLine,
 	}, "\n")
 
 	if statusLine != "" {
@@ -210,8 +164,6 @@ func (m Model) View() string {
 
 	return borderStyle.Render(body)
 }
-
-// --- Commands ---
 
 func authCmd(client *bsky.Client) tea.Cmd {
 	return func() tea.Msg {
