@@ -30,6 +30,18 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+brews:
+  - name: post2bsky
+    repository:
+      owner: lCyou
+      name: homebrew-tap
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    homepage: "https://github.com/lCyou/zenn-post2bsky"
+    description: "Terminal TUI app to post to Bluesky"
+    license: "MIT"
+    install: |
+      bin.install "post2bsky"
+
 changelog:
   sort: asc
   filters:
