@@ -32,6 +32,7 @@ checksum:
 
 brews:
   - name: post2bsky
+    directory: Formula
     repository:
       owner: lCyou
       name: homebrew-tap
