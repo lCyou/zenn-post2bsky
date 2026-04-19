@@ -24,6 +24,8 @@
 brew install lCyou/tap/post2bsky
 ```
 
+> `brew tap lCyou/tap && brew install post2bsky` でも同じです。
+
 **直接ダウンロード**
 
 [Releases](https://github.com/lCyou/zenn-post2bsky/releases/latest) から環境に合ったバイナリをダウンロードして解凍し、PATH の通った場所に置いてください。
