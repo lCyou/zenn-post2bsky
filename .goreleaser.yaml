@@ -44,6 +44,21 @@ brews:
     install: |
       bin.install "post2bsky"
 
+nix_packages:
+  - name: post2bsky
+    repository:
+      owner: lCyou
+      name: nix-overlay
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_message_template: "chore: update post2bsky to {{ .Tag }}"
+    homepage: "https://github.com/lCyou/zenn-post2bsky"
+    description: "Terminal TUI app to post to Bluesky"
+    license: "mit"
+    skip_upload: auto
+
 changelog:
   sort: asc
   filters:

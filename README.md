@@ -26,6 +26,21 @@ brew install lCyou/tap/post2bsky
 
 > `brew tap lCyou/tap && brew install post2bsky` でも同じです。
 
+**Nix**
+
+```bash
+nix profile install github:lCyou/nix-overlay#post2bsky
+```
+
+または `flake.nix` に追加して使う場合：
+
+```nix
+inputs.lcyou-overlay.url = "github:lCyou/nix-overlay";
+
+# nixpkgs.overlays に追加
+nixpkgs.overlays = [ inputs.lcyou-overlay.overlays.default ];
+```
+
 **直接ダウンロード**
 
 [Releases](https://github.com/lCyou/zenn-post2bsky/releases/latest) から環境に合ったバイナリをダウンロードして解凍し、PATH の通った場所に置いてください。
